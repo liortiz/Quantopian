@@ -89,11 +89,6 @@ def make_pipeline():
     """
     # The factors we create here are based on fundamentals data and a moving
     # average of sentiment data
-    total_equity = Fundamentals.total_equity.latest 
-    net_assets = Fundamentals.net_assets.latest 
-    current_liabilities = Fundamentals.current_liabilities.latest 
-    diluted_eps_growth = Fundamentals.diluted_eps_growth.latest    
-    
     value = Fundamentals.ebit.latest / Fundamentals.enterprise_value.latest
     quality = Fundamentals.roe.latest
     sentiment_score = SimpleMovingAverage(
@@ -106,11 +101,6 @@ def make_pipeline():
     # We winsorize our factor values in order to lessen the impact of outliers
     # For more information on winsorization, please see
     # https://en.wikipedia.org/wiki/Winsorizing
-    total_equity_winsorized = total_equity.winsorize(min_percentile=0.05, max_percentile=0.95)
-    net_assets_winsorized = net_assets.winsorize(min_percentile=0.05, max_percentile=0.95)
-    current_liabilities_winsorized = current_liabilities.winsorize(min_percentile=0.05, max_percentile=0.95)
-    diluted_eps_growth_winsorized = diluted_eps_growth.winsorize(min_percentile=0.05, max_percentile=0.95)
-    
     value_winsorized = value.winsorize(min_percentile=0.05, max_percentile=0.95)
     quality_winsorized = quality.winsorize(min_percentile=0.05, max_percentile=0.95)
     sentiment_score_winsorized = sentiment_score.winsorize(
@@ -118,14 +108,25 @@ def make_pipeline():
         max_percentile=0.95
         )
 
+    # New Factors
+    
+    total_equity = Fundamentals.total_equity.latest
+    diluted_eps_growth = Fundamentals.diluted_eps_growth.latest
+    net_assets = Fundamentals.net_assets.latest
+    
+    total_equity_winsorized = total_equity.winsorize(min_percentile=0.05, max_percentile=0.95)
+    diluted_eps_growth_winsorized = diluted_eps_growth.winsorize(min_percentile=0.05, max_percentile=0.95)
+    net_assets_winsorized = net_assets.winsorize(min_percentile=0.05, max_percentile=0.95)
+
+
     # Here we combine our winsorized factors, z-scoring them to equalize their influence
     combined_factor = (
-        value_winsorized.zscore() 
-        + quality_winsorized.zscore() 
-        + sentiment_score_winsorized.zscore() 
-        + total_equity_winsorized.zscore()  
-        + net_assets_winsorized.zscore()
-        - current_liabilities_winsorized.zscore()     
+        value_winsorized.zscore() +
+        quality_winsorized.zscore() +
+        sentiment_score_winsorized.zscore() +
+        total_equity_winsorized.zscore() +
+        diluted_eps_growth_winsorized.zscore() +
+        net_assets_winsorized.zscore()
     )
 
     # Build Filters representing the top and bottom baskets of stocks by our
